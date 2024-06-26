@@ -4,27 +4,29 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"jaya-transport-service/config"
-	"jaya-transport-service/internal/services"
 	"log"
 	"time"
+
+	"jaya-transport-service/config"
+	"jaya-transport-service/internal/services"
 
 	"github.com/eclipse/paho.golang/autopaho"
 	"github.com/eclipse/paho.golang/paho"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/influxdata/influxdb-client-go/v2/api/write"
 	"github.com/redis/go-redis/v9"
 )
 
 type Service struct {
 	ctx          context.Context
 	mqttClient   *services.MqttClient
-	influxClient *services.InfluxCLient
+	influxClient *services.InfluxClient
 	redisClient  *services.Redis
 	jayaClient   *services.Jaya
 	cfg          *config.Config
 }
 
-func NewService(ctx context.Context, mqttClient *services.MqttClient, influxClient *services.InfluxCLient, redisClient *services.Redis, jayaClient *services.Jaya, cfg *config.Config) *Service {
+func NewService(ctx context.Context, mqttClient *services.MqttClient, influxClient *services.InfluxClient, redisClient *services.Redis, jayaClient *services.Jaya, cfg *config.Config) *Service {
 	return &Service{
 		ctx:          ctx,
 		mqttClient:   mqttClient,
@@ -36,135 +38,141 @@ func NewService(ctx context.Context, mqttClient *services.MqttClient, influxClie
 }
 
 func (s *Service) Start() {
+	s.subscribeToMQTT()
+	s.addPublishHandler()
+}
+
+func (s *Service) subscribeToMQTT() {
 	s.mqttClient.Client.Subscribe(context.Background(), &paho.Subscribe{
 		Subscriptions: []paho.SubscribeOptions{
 			{Topic: "$share/g1/JI/v2/#", QoS: 1},
 			{Topic: "$share/g1/provisioning", QoS: 1},
 		},
 	})
+}
 
+func (s *Service) addPublishHandler() {
 	s.mqttClient.Client.AddOnPublishReceived(func(pr autopaho.PublishReceived) (bool, error) {
-		// Handle provision request
-		if pr.Packet.Topic == "provisioning" {
-			var provisionRequest ProvisionRequest
-			err := json.Unmarshal(pr.Packet.Payload, &provisionRequest)
-			if err != nil {
-				fmt.Printf("error unmarshaling JSON: %v\n", err)
-				return true, nil
-			}
-			result, err := s.jayaClient.Provision(provisionRequest.SerialNumber)
-			if err != nil {
-				if err == services.ErrDeviceNotFound {
-					log.Printf("device with id: %s not found in Jaya Core.", provisionRequest.SerialNumber)
-				} else {
-					log.Printf("error get device %s", err)
-				}
-				return true, nil
-			}
-
-			response := ProvisionResponse{
-				Pattern: "provisioning/" + provisionRequest.SerialNumber + "/response",
-				Data: ProvisionResponseData{
-					Username: result.Username,
-					Password: result.Password,
-					Status:   result.Status,
-				},
-			}
-
-			p, err := json.Marshal(response)
-			if err != nil {
-				log.Printf("error build JSON: %s", err)
-				return true, nil
-			}
-
-			s.mqttClient.Client.Publish(s.ctx, &paho.Publish{
-				Topic:   "provisioning/" + provisionRequest.SerialNumber + "/response",
-				QoS:     2,
-				Payload: p,
-			})
-			return true, nil
-		}
-
-		topic := extractTopic(pr.Packet.Topic)
-
-		var device *services.Device
-		result, err := s.redisClient.Rdb.Get(s.ctx, "device/"+topic.gatewayId).Result()
-
-		if err == redis.Nil {
-			device, err = s.jayaClient.GetDevice(topic.deviceId)
-			fmt.Println("from jaya")
-			if err != nil {
-				if err == services.ErrDeviceNotFound {
-					log.Printf("device with id: %s not found in Jaya Core.", topic.gatewayId)
-				} else {
-					log.Printf("error get device %s", err)
-				}
-				return true, nil
-			}
-
-			jsondevice, err := json.Marshal(device)
-			if err != nil {
-				fmt.Printf("Error convert to map field: %v\n", err)
-				return true, nil
-			}
-			s.redisClient.Rdb.Set(s.ctx, "device/"+topic.gatewayId, jsondevice, 0)
-		} else if err != nil {
-			log.Printf("error getting device from Redis: %s", err)
-			return true, nil
-		} else {
-			err = json.Unmarshal([]byte(result), &device)
-			if err != nil {
-				log.Printf("error parse JSON: %s", err)
-				return true, nil
-			}
-		}
-
-		switch topic.subject {
-		case "gatewayhealth", "nodehealth":
-			var devicehealth DeviceHealth
-			err := json.Unmarshal(pr.Packet.Payload, &devicehealth)
-			if err != nil {
-				fmt.Printf("error unmarshaling JSON: %v\n", err)
-			}
-
-			device.Group["device"] = topic.deviceId
-			if topic.subject == "nodehealth" {
-				device.Group["gateway"] = topic.gatewayId
-			}
-
-			fields := StructToMapReflect(devicehealth)
-			delete(fields, "ts")
-			t := time.Unix(int64(devicehealth.Ts), 0)
-
-			point := influxdb2.NewPoint(topic.subject, device.Group, fields, t)
-			writeApi := s.influxClient.Client.WriteAPI(s.cfg.InfluxDB.Org, device.Tenant.Name)
-
-			writeApi.WritePoint(point)
-			log.Println("Receive data device heartbeat from " + topic.gatewayId)
+		switch pr.Packet.Topic {
+		case "provisioning":
+			s.handleProvisioning(pr.Packet.Payload)
 		default:
-			var nodeIOData NodeIOData
-			err := json.Unmarshal(pr.Packet.Payload, &nodeIOData)
-			if err != nil {
-				fmt.Printf("Error unmarshaling JSON: %v\n", err)
-			}
-
-			device.Group["device"] = topic.deviceId
-
-			t := time.Unix(int64(nodeIOData.Ts), 0)
-
-			fields, err := convertToMap(nodeIOData.Data)
-			if err != nil {
-				fmt.Printf("Error convert to map field: %v\n", err)
-				return true, nil
-			}
-
-			point := influxdb2.NewPoint(device.Type, device.Group, fields, t)
-			writeApi := s.influxClient.Client.WriteAPI(s.cfg.InfluxDB.Org, device.Tenant.Name)
-
-			writeApi.WritePoint(point)
-			log.Println("Receive data node data from " + topic.nodeId)
+			s.handleDeviceData(pr.Packet.Topic, pr.Packet.Payload)
 		}
-
 		return true, nil
 	})
+}
+
+func (s *Service) handleProvisioning(payload []byte) {
+	var provisionRequest ProvisionRequest
+	if err := json.Unmarshal(payload, &provisionRequest); err != nil {
+		log.Printf("error unmarshaling JSON: %v\n", err)
+		return
+	}
+
+	result, err := s.jayaClient.Provision(provisionRequest.SerialNumber)
+	if err != nil {
+		log.Printf("error provisioning device %s: %v", provisionRequest.SerialNumber, err)
+		return
+	}
+
+	response := ProvisionResponse{
+		Pattern: "provisioning/" + provisionRequest.SerialNumber + "/response",
+		Data: ProvisionResponseData{
+			Username: result.Username,
+			Password: result.Password,
+			Status:   result.Status,
+		},
+	}
+
+	if p, err := json.Marshal(response); err == nil {
+		s.mqttClient.Client.Publish(s.ctx, &paho.Publish{
+			Topic:   response.Pattern,
+			QoS:     2,
+			Payload: p,
+		})
+	} else {
+		log.Printf("error building JSON: %v", err)
+	}
+}
+
+func (s *Service) handleDeviceData(topic string, payload []byte) {
+	t := extractTopic(topic)
+
+	device, err := s.getDeviceFromCacheOrService(t.gatewayId, t.deviceId)
+	if err != nil {
+		log.Printf("Error getting device: %v", err)
+		return
+	}
+
+	switch t.subject {
+	case "gatewayhealth", "nodehealth":
+		s.handleHealthData(t, payload, device)
+	default:
+		s.handleNodeData(t, payload, device)
+	}
+}
+
+func (s *Service) getDeviceFromCacheOrService(gatewayId, deviceId string) (*services.Device, error) {
+	result, err := s.redisClient.Rdb.Get(s.ctx, "device/"+gatewayId).Result()
+	if err == redis.Nil {
+		device, err := s.jayaClient.GetDevice(deviceId)
+		if err != nil {
+			return nil, fmt.Errorf("error getting device from service: %w", err)
+		}
+		if jsonDevice, err := json.Marshal(device); err == nil {
+			s.redisClient.Rdb.Set(s.ctx, "device/"+gatewayId, jsonDevice, 0)
+		}
+		return device, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("error getting device from Redis: %w", err)
+	}
+
+	var device services.Device
+	if err := json.Unmarshal([]byte(result), &device); err != nil {
+		return nil, fmt.Errorf("error parsing device JSON: %w", err)
+	}
+	return &device, nil
+}
+
+func (s *Service) handleHealthData(t *eventTopic, payload []byte, device *services.Device) {
+	var healthData DeviceHealth
+	if err := json.Unmarshal(payload, &healthData); err != nil {
+		log.Printf("error unmarshaling health data: %v", err)
+		return
+	}
+
+	device.Group["device"] = t.deviceId
+
+	fields := StructToMapReflect(healthData)
+	delete(fields, "ts")
+	point := influxdb2.NewPoint(t.subject, device.Group, fields, time.Unix(int64(healthData.Ts), 0))
+	s.writeToInfluxDB(device.Tenant.Name, point)
+
+	log.Printf("Received device health data from %s", t.gatewayId)
+}
+
+func (s *Service) handleNodeData(t *eventTopic, payload []byte, device *services.Device) {
+	var nodeData NodeIOData
+	if err := json.Unmarshal(payload, &nodeData); err != nil {
+		log.Printf("Error unmarshaling node data: %v", err)
+		return
+	}
+
+	device.Group["device"] = t.deviceId
+	fields, err := convertToMap(nodeData.Data)
+	if err != nil {
+		log.Printf("Error converting node data to map: %v", err)
+		return
+	}
+
+	point := influxdb2.NewPoint(device.Type, device.Group, fields, time.Unix(int64(nodeData.Ts), 0))
+	s.writeToInfluxDB(device.Tenant.Name, point)
+
+	log.Printf("Received node data from %s", t.nodeId)
+}
+
+func (s *Service) writeToInfluxDB(org string, point *write.Point) {
+	writeApi := s.influxClient.Client.WriteAPI(s.cfg.InfluxDB.Org, org)
+	writeApi.WritePoint(point)
 }

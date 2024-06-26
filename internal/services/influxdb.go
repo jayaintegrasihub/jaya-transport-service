@@ -9,12 +9,12 @@ import (
 	"github.com/influxdata/influxdb-client-go/v2/api"
 )
 
-type InfluxCLient struct {
+type InfluxClient struct {
 	Client   influxdb2.Client
 	WriteApi api.WriteAPI
 }
 
-func NewInfluxClient(ctx context.Context, conf config.InfluxDBConfig) (*InfluxCLient, error) {
+func NewInfluxClient(ctx context.Context, conf config.InfluxDBConfig) (*InfluxClient, error) {
 	client := influxdb2.NewClientWithOptions(conf.URL, conf.Token,
 		influxdb2.DefaultOptions().
 			SetUseGZip(true))
@@ -25,5 +25,5 @@ func NewInfluxClient(ctx context.Context, conf config.InfluxDBConfig) (*InfluxCL
 	}
 
 	writeApi := client.WriteAPI(conf.Org, conf.Bucket)
-	return &InfluxCLient{Client: client, WriteApi: writeApi}, nil
+	return &InfluxClient{Client: client, WriteApi: writeApi}, nil
 }
