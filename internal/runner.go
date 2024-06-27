@@ -125,7 +125,7 @@ func (s *Service) getDeviceFromCacheOrService(gatewayId, deviceId string) (*serv
 			return nil, fmt.Errorf("error getting device from service: %w", err)
 		}
 		if jsonDevice, err := json.Marshal(device); err == nil {
-			s.redisClient.Rdb.Set(s.ctx, "device/"+gatewayId, jsonDevice, 0)
+			s.redisClient.Rdb.Set(s.ctx, "device/"+gatewayId, jsonDevice, 3*time.Hour)
 		}
 		return device, nil
 	} else if err != nil {
