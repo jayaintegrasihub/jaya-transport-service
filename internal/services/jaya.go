@@ -62,7 +62,7 @@ func (j *Jaya) GetDevice(id string) (*Device, error) {
 		return nil, fmt.Errorf("error when request devices %s from jaya core. error: %w", id, err)
 	}
 
-	if resp.StatusCode() == http.StatusNotFound {
+	if resp.StatusCode() != 200 {
 		return nil, ErrDeviceNotFound
 	}
 
