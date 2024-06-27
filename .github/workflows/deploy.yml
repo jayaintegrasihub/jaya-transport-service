@@ -61,4 +61,4 @@ jobs:
             sudo docker rmi sigitnurmajid/jaya-transport-service:main
             sudo docker pull sigitnurmajid/jaya-transport-service:main
 
-            sudo docker run -t -d --network host --name jaya-transport-service sigitnurmajid/jaya-transport-service:main
+            sudo docker run -t -d --restart always --network host --name jaya-transport-service sigitnurmajid/jaya-transport-service:main
