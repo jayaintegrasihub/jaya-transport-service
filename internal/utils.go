@@ -1,12 +1,13 @@
 package internal
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"unicode"
 )
 
-func extractTopic(topicString string) *eventTopic {
+func extractTopic(topicString string) (*eventTopic, error) {
 	topic := strings.Split(topicString, "/")
 
 	if len(topic) == 4 {
@@ -16,8 +17,8 @@ func extractTopic(topicString string) *eventTopic {
 			gatewayId: topic[2],
 			subject:   topic[3],
 			deviceId:  topic[2],
-		}
-	} else {
+		}, nil
+	} else if len(topic) == 5 {
 		return &eventTopic{
 			prefix:    topic[0],
 			version:   topic[1],
@@ -25,7 +26,9 @@ func extractTopic(topicString string) *eventTopic {
 			nodeId:    topic[3],
 			subject:   topic[4],
 			deviceId:  topic[3],
-		}
+		}, nil
+	} else {
+		return nil, fmt.Errorf("topic not supported to be extract : %v", topicString)
 	}
 }
 

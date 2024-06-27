@@ -97,7 +97,11 @@ func (s *Service) handleProvisioning(payload []byte) {
 }
 
 func (s *Service) handleDeviceData(topic string, payload []byte) {
-	t := extractTopic(topic)
+	t, err := extractTopic(topic)
+	if err != nil {
+		log.Printf("%v", err)
+		return
+	}
 
 	device, err := s.getDeviceFromCacheOrService(t.gatewayId, t.deviceId)
 	if err != nil {
