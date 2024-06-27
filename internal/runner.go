@@ -105,7 +105,7 @@ func (s *Service) handleDeviceData(topic string, payload []byte) {
 
 	device, err := s.getDeviceFromCacheOrService(t.gatewayId, t.deviceId)
 	if err != nil {
-		log.Printf("Error getting device: %v", err)
+		log.Printf("%v", err)
 		return
 	}
 
@@ -173,7 +173,7 @@ func (s *Service) handleNodeData(t *eventTopic, payload []byte, device *services
 	point := influxdb2.NewPoint(device.Type, device.Group, fields, time.Unix(int64(nodeData.Ts), 0))
 	s.writeToInfluxDB(device.Tenant.Name, point)
 
-	log.Printf("Received node data from %s", t.nodeId)
+	log.Printf("Received node data from %s", t.deviceId)
 }
 
 func (s *Service) writeToInfluxDB(org string, point *write.Point) {

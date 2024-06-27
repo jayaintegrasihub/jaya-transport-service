@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"jaya-transport-service/config"
-	"net/http"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -63,7 +62,7 @@ func (j *Jaya) GetDevice(id string) (*Device, error) {
 	}
 
 	if resp.StatusCode() != 200 {
-		return nil, ErrDeviceNotFound
+		return nil, errors.New(string(resp.Body()))
 	}
 
 	result := resp.Result().(*DeviceResponse)
@@ -78,8 +77,8 @@ func (j *Jaya) Provision(id string) (*JayaProvisionResponse, error) {
 		return nil, fmt.Errorf("error when request provisioning %s from jaya core. error: %w", id, err)
 	}
 
-	if resp.StatusCode() == http.StatusNotFound {
-		return nil, ErrDeviceNotFound
+	if resp.StatusCode() != 200 {
+		return nil, errors.New(string(resp.Body()))
 	}
 
 	result := resp.Result().(*JayaProvisionResponse)
