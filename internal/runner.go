@@ -84,7 +84,7 @@ func (s *Service) handleProvisioning(payload []byte) {
 			Status:   result.Status,
 		},
 	}
-
+	log.Printf("Received provisioning request from %s", provisionRequest.SerialNumber)
 	if p, err := json.Marshal(response); err == nil {
 		s.mqttClient.Client.Publish(s.ctx, &paho.Publish{
 			Topic:   response.Pattern,
@@ -103,7 +103,7 @@ func (s *Service) handleDeviceData(topic string, payload []byte) {
 		return
 	}
 
-	device, err := s.getDeviceFromCacheOrService(t.gatewayId, t.deviceId)
+	device, err := s.getDeviceFromCacheOrService(t.deviceId)
 	if err != nil {
 		log.Printf("%v", err)
 		return
@@ -117,15 +117,15 @@ func (s *Service) handleDeviceData(topic string, payload []byte) {
 	}
 }
 
-func (s *Service) getDeviceFromCacheOrService(gatewayId, deviceId string) (*services.Device, error) {
-	result, err := s.redisClient.Rdb.Get(s.ctx, "device/"+gatewayId).Result()
+func (s *Service) getDeviceFromCacheOrService(deviceId string) (*services.Device, error) {
+	result, err := s.redisClient.Rdb.Get(s.ctx, "device/"+deviceId).Result()
 	if err == redis.Nil {
 		device, err := s.jayaClient.GetDevice(deviceId)
 		if err != nil {
 			return nil, fmt.Errorf("error getting device from service: %w", err)
 		}
 		if jsonDevice, err := json.Marshal(device); err == nil {
-			s.redisClient.Rdb.Set(s.ctx, "device/"+gatewayId, jsonDevice, 3*time.Hour)
+			s.redisClient.Rdb.Set(s.ctx, "device/"+deviceId, jsonDevice, 3*time.Hour)
 		}
 		return device, nil
 	} else if err != nil {
