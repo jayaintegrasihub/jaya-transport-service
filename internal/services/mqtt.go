@@ -31,6 +31,8 @@ func NewMqttClient(ctx context.Context, cfg config.MQTTConfig) (*MqttClient, err
 
 	cliCfg := autopaho.ClientConfig{
 		ServerUrls:                    []*url.URL{u},
+		ConnectUsername:               cfg.Username,
+		ConnectPassword:               []byte(cfg.Password),
 		KeepAlive:                     60,
 		CleanStartOnInitialConnection: true,
 		SessionExpiryInterval:         0,

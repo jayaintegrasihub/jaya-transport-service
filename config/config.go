@@ -15,6 +15,8 @@ type MQTTConfig struct {
 	Broker   string
 	ClientID string
 	Topic    string
+	Username string
+	Password string
 }
 
 type InfluxDBConfig struct {
@@ -45,6 +47,8 @@ func LoadConfig() *Config {
 			Broker:   viper.GetString("MQTT_BROKER"),
 			ClientID: viper.GetString("MQTT_CLIENT_ID"),
 			Topic:    viper.GetString("MQTT_TOPIC"),
+			Username: viper.GetString("MQTT_USERNAME"),
+			Password: viper.GetString("MQTT_PASSWORD"),
 		},
 		InfluxDB: InfluxDBConfig{
 			URL:    viper.GetString("INFLUXDB_URL"),
