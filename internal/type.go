@@ -2,29 +2,6 @@ package internal
 
 import "fmt"
 
-type NodeDeviceHealth struct {
-	MessageId   int     `json:"msgId"`
-	Ts          int     `json:"ts"`
-	Uptime      int     `json:"uptime"`
-	Temperature float32 `json:"temp"`
-	Humidity    float32 `json:"hum"`
-	HwVersion   string  `json:"hwVer"`
-	FwVersion   string  `json:"fwVer"`
-	RdVersion   string  `json:"rdVer"`
-}
-
-type GatewayDeviceHealth struct {
-	MessageId   int     `json:"msgId"`
-	Ts          int     `json:"ts"`
-	Uptime      int     `json:"uptime"`
-	Temperature float32 `json:"temp"`
-	Humidity    float32 `json:"hum"`
-	Rssi        float32 `json:"rssi"`
-	HwVersion   string  `json:"hwVer"`
-	FwVersion   string  `json:"fwVer"`
-	RdVersion   string  `json:"rdVer"`
-}
-
 type DeviceHealth struct {
 	MessageId   int     `json:"msgId"`
 	Ts          int     `json:"ts"`
@@ -35,6 +12,7 @@ type DeviceHealth struct {
 	HwVersion   string  `json:"hwVer"`
 	FwVersion   string  `json:"fwVer"`
 	RdVersion   string  `json:"rdVer"`
+	Model       string  `json:"model"`
 }
 
 type eventTopic struct {
