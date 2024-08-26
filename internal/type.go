@@ -55,8 +55,11 @@ func convertToMap(dataArray []IOData) (map[string]interface{}, error) {
 	if len(dataArray) == 0 {
 		return nil, fmt.Errorf("array length is 0")
 	}
+
 	for _, data := range dataArray {
-		m[data.Tag] = data.Value
+		if len(data.Tag) > 0 {
+			m[data.Tag] = data.Value
+		}
 	}
 	return m, nil
 }
