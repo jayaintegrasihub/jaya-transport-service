@@ -61,5 +61,9 @@ func convertToMap(dataArray []IOData) (map[string]interface{}, error) {
 			m[data.Tag] = data.Value
 		}
 	}
+
+	if len(m) == 0 {
+		return nil, fmt.Errorf("data map is empty")
+	}
 	return m, nil
 }
