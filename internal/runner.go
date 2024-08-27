@@ -177,6 +177,10 @@ func (s *Service) handleNodeData(t *eventTopic, payload []byte, device *services
 }
 
 func (s *Service) writeToInfluxDB(org string, point *write.Point) {
-	writeApi := s.influxClient.Client.WriteAPI(s.cfg.InfluxDB.Org, org)
-	writeApi.WritePoint(point)
+	writeApi := s.influxClient.Client.WriteAPIBlocking(s.cfg.InfluxDB.Org, org)
+
+	err := writeApi.WritePoint(context.Background(), point)
+	if err != nil {
+		log.Printf("Error write point to influxdb %s", err)
+	}
 }
