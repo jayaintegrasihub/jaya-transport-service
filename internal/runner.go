@@ -151,7 +151,7 @@ func (s *Service) handleHealthData(t *eventTopic, payload []byte, device *servic
 	fields := StructToMapReflect(healthData)
 	delete(fields, "ts")
 	point := influxdb2.NewPoint("deviceshealth", device.Group, fields, time.Unix(int64(healthData.Ts), 0))
-	s.writeToInfluxDB(device.Tenant.Name, point)
+	s.writeToInfluxDB(device.Tenant.Name, point, payload)
 
 	log.Printf("Received device health data from %s", t.gatewayId)
 }
@@ -171,16 +171,16 @@ func (s *Service) handleNodeData(t *eventTopic, payload []byte, device *services
 	}
 
 	point := influxdb2.NewPoint(device.Type, device.Group, fields, time.Unix(int64(nodeData.Ts), 0))
-	s.writeToInfluxDB(device.Tenant.Name, point)
+	s.writeToInfluxDB(device.Tenant.Name, point, payload)
 
 	log.Printf("Received node data from %s", t.deviceId)
 }
 
-func (s *Service) writeToInfluxDB(org string, point *write.Point) {
+func (s *Service) writeToInfluxDB(org string, point *write.Point, payload []byte) {
 	writeApi := s.influxClient.Client.WriteAPIBlocking(s.cfg.InfluxDB.Org, org)
 
 	err := writeApi.WritePoint(context.Background(), point)
 	if err != nil {
-		log.Printf("Error write point to influxdb %s", err)
+		log.Printf("Error write point to influxdb %s with data %s", err, string(payload))
 	}
 }
