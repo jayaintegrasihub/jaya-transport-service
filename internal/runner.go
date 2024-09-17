@@ -147,7 +147,7 @@ func (s *Service) handleHealthData(t *eventTopic, payload []byte, device *servic
 	}
 
 	device.Group["device"] = t.deviceId
-
+	device.Group["gateway"] = t.gatewayId
 	fields := StructToMapReflect(healthData)
 	delete(fields, "ts")
 	point := influxdb2.NewPoint("deviceshealth", device.Group, fields, time.Unix(int64(healthData.Ts), 0))
