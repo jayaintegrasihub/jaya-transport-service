@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"jaya-transport-service/config"
@@ -47,7 +46,7 @@ type Jaya struct {
 
 var ErrDeviceNotFound = errors.New("Device Not Found")
 
-func NewJayaService(ctx context.Context, conf config.JayaApiConfig) *Jaya {
+func NewJayaService(conf config.JayaApiConfig) *Jaya {
 	client := resty.New()
 	client.SetBaseURL(conf.URL)
 	client.SetHeader("api-key", conf.Token)

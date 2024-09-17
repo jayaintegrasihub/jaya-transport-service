@@ -164,6 +164,7 @@ func (s *Service) handleNodeData(t *eventTopic, payload []byte, device *services
 	}
 
 	device.Group["device"] = t.deviceId
+	device.Group["gateway"] = t.gatewayId
 	fields, err := convertToMap(nodeData.Data)
 	if err != nil {
 		log.Printf("Error converting node data to map: %v", err)
