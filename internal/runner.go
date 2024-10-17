@@ -150,10 +150,18 @@ func (s *Service) handleHealthData(t *eventTopic, payload []byte, device *servic
 	device.Group["gateway"] = t.gatewayId
 	fields := StructToMapReflect(healthData)
 	delete(fields, "ts")
+
+	if healthData.Modules != nil {
+		for _, module := range healthData.Modules {
+			fields[module.Name] = module.Status
+		}
+	}
+	delete(fields, "modules")
+
 	point := influxdb2.NewPoint("deviceshealth", device.Group, fields, time.Unix(int64(healthData.Ts), 0))
 	s.writeToInfluxDB(device.Tenant.Name, point)
 
-	log.Printf("Received device health data from %s", t.gatewayId)
+	log.Printf("Received device health data from %s", t.deviceId)
 }
 
 func (s *Service) handleNodeData(t *eventTopic, payload []byte, device *services.Device) {
