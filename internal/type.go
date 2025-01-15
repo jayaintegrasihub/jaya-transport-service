@@ -3,18 +3,18 @@ package internal
 import "fmt"
 
 type DeviceHealth struct {
-	MessageId     int           `json:"msgId"`
-	Ts            int           `json:"ts"`
-	Uptime        int           `json:"uptime"`
-	Temperature   float32       `json:"temp"`
-	Humidity      float32       `json:"hum"`
-	Rssi          float32       `json:"rssi"`
-	HwVersion     string        `json:"hwVer"`
-	FwVersion     string        `json:"fwVer"`
-	RdVersion     string        `json:"rdVer"`
-	Model         string        `json:"model"`
-	Modules       []ModulesData `json:"modules"`
-	RestartReason int           `json:"restartReason"`
+	MessageId   int           `json:"msgId"`
+	Ts          int           `json:"ts"`
+	Uptime      int           `json:"uptime"`
+	Temperature float32       `json:"temp"`
+	Humidity    float32       `json:"hum"`
+	Rssi        float32       `json:"rssi"`
+	HwVersion   string        `json:"hwVer"`
+	FwVersion   string        `json:"fwVer"`
+	RdVersion   string        `json:"rdVer"`
+	Model       string        `json:"model"`
+	Modules     []ModulesData `json:"modules"`
+	ResetReason int           `json:"resetReason"`
 }
 
 type ModulesData struct {
