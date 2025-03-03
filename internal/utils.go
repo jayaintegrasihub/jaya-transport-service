@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -54,7 +55,35 @@ func lowercaseFirstChar(s string) string {
 	return string(runes)
 }
 
-// AI/v2/gatewayid/devicehealth
-// AI/v2/gatewayid/nodeid/devicehealth
-// AI/v2/gatewayid/nodeid/serial
-// AI/v2/gatewayid/nodeid/io
+func parseTimestamp(ts interface{}) time.Time {
+	switch v := ts.(type) {
+	case int:
+		return time.Unix(int64(v), 0)
+	case float64:
+		return time.Unix(int64(v), 0)
+	case string:
+		// Layout for ISO 8601 with microseconds
+		iso8601Micro := "2006-01-02T15:04:05.999999"
+		iso8601Nano := "2006-01-02T15:04:05.999999999"
+
+		// Try parsing with microseconds precision
+		if parsedTime, err := time.Parse(iso8601Micro, v); err == nil {
+			return parsedTime
+		}
+
+		// Try parsing with nanoseconds precision (fallback)
+		if parsedTime, err := time.Parse(iso8601Nano, v); err == nil {
+			return parsedTime
+		}
+
+		// Try RFC3339 (compatible with ISO 8601)
+		if parsedTime, err := time.Parse(time.RFC3339, v); err == nil {
+			return parsedTime
+		}
+
+		fmt.Println("Error: Invalid ISO 8601 timestamp format:", v)
+	default:
+		fmt.Println("Error: Unsupported timestamp type:", v)
+	}
+	return time.Time{}
+}

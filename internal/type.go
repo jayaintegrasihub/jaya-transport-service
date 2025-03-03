@@ -4,7 +4,7 @@ import "fmt"
 
 type DeviceHealth struct {
 	MessageId   int           `json:"msgId"`
-	Ts          int           `json:"ts"`
+	Ts          interface{}   `json:"ts"`
 	Uptime      int           `json:"uptime"`
 	Temperature float32       `json:"temp"`
 	Humidity    float32       `json:"hum"`
@@ -47,9 +47,9 @@ type ProvisionResponseData struct {
 }
 
 type NodeIOData struct {
-	Ts   int      `json:"ts"`
-	Rssi int      `json:"rssi"`
-	Data []IOData `json:"data"`
+	Ts   interface{} `json:"ts"`
+	Rssi int         `json:"rssi"`
+	Data []IOData    `json:"data"`
 }
 
 type IOData struct {
