@@ -163,7 +163,7 @@ func (s *Service) handleHealthData(t *eventTopic, payload []byte, device *servic
 	point := influxdb2.NewPoint("deviceshealth", device.Group, fields, ts)
 	s.writeToInfluxDB(device.Tenant.Name, point)
 
-	log.Printf("Received device health data from %s", t.deviceId)
+	log.Printf("Received device health data from %s time: %s", t.deviceId, ts.Format("2006-01-02 15:04:05"))
 }
 
 func (s *Service) handleNodeData(t *eventTopic, payload []byte, device *services.Device) {
@@ -186,7 +186,7 @@ func (s *Service) handleNodeData(t *eventTopic, payload []byte, device *services
 	point := influxdb2.NewPoint(device.Type, device.Group, fields, ts)
 	s.writeToInfluxDB(device.Tenant.Name, point)
 
-	log.Printf("Received node data from %s", t.deviceId)
+	log.Printf("Received node data from %s time: %s", t.deviceId, ts.Format("2006-01-02 15:04:05"))
 }
 
 func (s *Service) writeToInfluxDB(bucket string, point *write.Point) {
