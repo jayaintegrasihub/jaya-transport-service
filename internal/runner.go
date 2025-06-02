@@ -125,7 +125,7 @@ func (s *Service) getDeviceFromCacheOrService(deviceId string) (*services.Device
 			return nil, fmt.Errorf("error getting device from service: %w", err)
 		}
 		if jsonDevice, err := json.Marshal(device); err == nil {
-			s.redisClient.Rdb.Set(s.ctx, "device/"+deviceId, jsonDevice, 3*time.Hour)
+			s.redisClient.Rdb.Set(s.ctx, "device/"+deviceId, jsonDevice, 10*time.Minute)
 		}
 		return device, nil
 	} else if err != nil {
@@ -158,7 +158,9 @@ func (s *Service) handleHealthData(t *eventTopic, payload []byte, device *servic
 	}
 	delete(fields, "modules")
 
-	point := influxdb2.NewPoint("deviceshealth", device.Group, fields, time.Unix(int64(healthData.Ts), 0))
+	ts := parseTimestamp(healthData.Ts)
+
+	point := influxdb2.NewPoint("deviceshealth", device.Group, fields, ts)
 	s.writeToInfluxDB(device.Tenant.Name, point)
 
 	log.Printf("Received device health data from %s", t.deviceId)
@@ -179,7 +181,9 @@ func (s *Service) handleNodeData(t *eventTopic, payload []byte, device *services
 		return
 	}
 
-	point := influxdb2.NewPoint(device.Type, device.Group, fields, time.Unix(int64(nodeData.Ts), 0))
+	ts := parseTimestamp(nodeData.Ts)
+
+	point := influxdb2.NewPoint(device.Type, device.Group, fields, ts)
 	s.writeToInfluxDB(device.Tenant.Name, point)
 
 	log.Printf("Received node data from %s", t.deviceId)
