@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sync/atomic"
 	"time"
 
 	"jaya-transport-service/config"
@@ -24,6 +25,8 @@ type Service struct {
 	redisClient  *services.Redis
 	jayaClient   *services.Jaya
 	cfg          *config.Config
+	messageChan chan MqttMessage
+	messageCount atomic.Int64
 }
 
 func NewService(ctx context.Context, mqttClient *services.MqttClient, influxClient *services.InfluxClient, redisClient *services.Redis, jayaClient *services.Jaya, cfg *config.Config) *Service {
@@ -34,12 +37,22 @@ func NewService(ctx context.Context, mqttClient *services.MqttClient, influxClie
 		redisClient:  redisClient,
 		jayaClient:   jayaClient,
 		cfg:          cfg,
+		messageChan:  make(chan MqttMessage, 1000),
 	}
 }
 
 func (s *Service) Start() {
 	s.subscribeToMQTT()
 	s.addPublishHandler()
+	s.startWorkerPool(5)
+
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		for range ticker.C {
+			count := s.messageCount.Swap(0)
+			log.Printf("Messages processed per second: %d", count)
+		}
+	}()
 }
 
 func (s *Service) subscribeToMQTT() {
@@ -53,14 +66,30 @@ func (s *Service) subscribeToMQTT() {
 
 func (s *Service) addPublishHandler() {
 	s.mqttClient.Client.AddOnPublishReceived(func(pr autopaho.PublishReceived) (bool, error) {
-		switch pr.Packet.Topic {
-		case "provisioning":
-			s.handleProvisioning(pr.Packet.Payload)
-		default:
-			s.handleDeviceData(pr.Packet.Topic, pr.Packet.Payload)
+		s.messageChan <- MqttMessage{
+			Topic:   pr.Packet.Topic,
+			Payload: pr.Packet.Payload,
 		}
 		return true, nil
 	})
+}
+
+func (s *Service) startWorkerPool(n int) {
+	for i := 0; i < n; i++ {
+		go s.processMessages()
+	}
+}
+
+func (s *Service) processMessages() {
+	for msg := range s.messageChan {
+		s.messageCount.Add(1)
+
+		if msg.Topic == "provisioning" {
+			s.handleProvisioning(msg.Payload)
+		} else {
+			s.handleDeviceData(msg.Topic, msg.Payload)
+		}
+	}
 }
 
 func (s *Service) handleProvisioning(payload []byte) {
