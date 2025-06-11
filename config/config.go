@@ -68,8 +68,3 @@ func LoadConfig() *Config {
 		},
 	}
 }
-
-// AI/v2/gatewayid/devicehealth
-// AI/v2/gatewayid/nodeid/devicehealth
-// AI/v2/gatewayid/nodeid/serial
-// AI/v2/gatewayid/nodeid/io

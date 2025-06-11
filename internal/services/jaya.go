@@ -46,12 +46,17 @@ type Jaya struct {
 
 var ErrDeviceNotFound = errors.New("Device Not Found")
 
-func NewJayaService(conf config.JayaApiConfig) *Jaya {
+func NewJayaService(conf config.JayaApiConfig) (*Jaya,error) {
 	client := resty.New()
 	client.SetBaseURL(conf.URL)
 	client.SetHeader("api-key", conf.Token)
 
-	return &Jaya{client: client}
+	resp, _ := client.R().Get("/health")
+	if resp.StatusCode() != 200 {
+		return nil, fmt.Errorf("error when cek health influxdb, server url: %s", conf.URL)
+	}
+
+	return &Jaya{client: client}, nil
 }
 
 func (j *Jaya) GetDevice(id string) (*Device, error) {
