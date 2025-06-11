@@ -53,7 +53,7 @@ func NewJayaService(conf config.JayaApiConfig) (*Jaya,error) {
 
 	resp, _ := client.R().Get("/health")
 	if resp.StatusCode() != 200 {
-		return nil, fmt.Errorf("error when cek health influxdb, server url: %s", conf.URL)
+		return nil, fmt.Errorf("error when cek health jaya, server url: %s", conf.URL)
 	}
 
 	return &Jaya{client: client}, nil
