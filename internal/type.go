@@ -57,6 +57,11 @@ type IOData struct {
 	Tag   string      `json:"tag"`
 }
 
+type MqttMessage struct {
+	Topic   string
+	Payload []byte
+}
+
 func convertToMap(dataArray []IOData) (map[string]interface{}, error) {
 	m := make(map[string]interface{})
 	if len(dataArray) == 0 {
