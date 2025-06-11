@@ -51,9 +51,9 @@ func NewJayaService(conf config.JayaApiConfig) (*Jaya,error) {
 	client.SetBaseURL(conf.URL)
 	client.SetHeader("api-key", conf.Token)
 
-	resp, _ := client.R().Get("/health")
+	resp, err := client.R().Get("/health")
 	if resp.StatusCode() != 200 {
-		return nil, fmt.Errorf("error when cek health jaya, server url: %s", conf.URL)
+		return nil, fmt.Errorf("error when cek health jaya, server url: %s. error: %w", conf.URL, err)
 	}
 
 	return &Jaya{client: client}, nil
