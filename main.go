@@ -68,7 +68,10 @@ func main() {
 
 	// Create Jaya client
 	log.Printf("Setup Jaya Service")
-	jayaClient := services.NewJayaService(cfg.JayaApi)
+	jayaClient, err := services.NewJayaService(cfg.JayaApi)
+	if err != nil {
+		log.Fatalf("Error creating Jaya client: %v", err)
+	}
 
 	// Start the service
 	svc := internal.NewService(ctx, mqttClient, influxClient, redisClient, jayaClient, cfg)
