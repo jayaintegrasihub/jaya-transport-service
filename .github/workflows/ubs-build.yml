@@ -4,11 +4,7 @@
 name: Jaya Transport Service CI/CD
 
 on:
-  release:
-    types: [published]
-  push:
-    tags:
-       - 'v*.*.*'
+  workflow_dispatch:
 
 jobs:
   push_to_registry:
