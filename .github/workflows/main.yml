@@ -16,16 +16,18 @@ jobs:
 
       - name: Set Environment File
         run: |
-          if [[ "${GITHUB_REF_NAME}" == *"ubs_kalung"* ]]; then
-            echo "${{ secrets.ENV_UBS_FILE_PRODUCTION }}" > .env
+          TAG_NAME="${GITHUB_REF_NAME}"
+          if [[ "$TAG_NAME" == *"ubs_kalung"* ]]; then
             echo "ENVIRONMENT=ubs_kalung" >> $GITHUB_ENV
-          elif [[ "${GITHUB_REF_NAME}" == *"ubs_hollow"* ]]; then
-            echo "${{ secrets.ENV_UBS_HOLLOW_FILE_PRODUCTION }}" > .env
+            echo "${{ secrets.ENV_UBS_FILE_PRODUCTION }}" > .env
+          elif [[ "$TAG_NAME" == *"ubs_hollow"* ]]; then
             echo "ENVIRONMENT=ubs_hollow" >> $GITHUB_ENV
+            echo "${{ secrets.ENV_UBS_HOLLOW_FILE_PRODUCTION }}" > .env
           else
-            echo "${{ secrets.ENV_FILE_PRODUCTION }}" > .env
             echo "ENVIRONMENT=main" >> $GITHUB_ENV
+            echo "${{ secrets.ENV_FILE_PRODUCTION }}" > .env
           fi
+
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
