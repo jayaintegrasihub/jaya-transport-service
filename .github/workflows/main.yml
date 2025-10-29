@@ -1,9 +1,7 @@
 name: Jaya Transport Service CI/CD
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  workflow_dispatch:
 
 jobs:
   container:
