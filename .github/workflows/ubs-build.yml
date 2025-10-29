@@ -31,8 +31,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: |
-            sigitnurmajid/jaya-transport-service
+          images: sigitnurmajid/jaya-transport-service
+          flavor: |
+            latest=false
           tags: |
             type=ref,event=tag
             type=raw,value=latest-ubs_kalung
