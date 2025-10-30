@@ -6,21 +6,21 @@ name: Jaya Transport Service CI/CD
 on:
   push:
     tags:
-      - 'v*'
-      - '!v*-'
+      - "v*"
+      - "!v*-"
 
 jobs:
   push_to_registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Check out the repo
         uses: actions/checkout@v3
-      
-      - name: Create environment production
-        run: |
-          echo "${{ secrets.ENV_FILE_PRODUCTION }}" > .env
+
+      # - name: Create environment production
+      #   run: |
+      #     echo "${{ secrets.ENV_FILE_PRODUCTION }}" > .env
 
       - name: Log in to Docker Hub
         uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
@@ -37,7 +37,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}-{{ github.event.release.target_commitish }}
             type=raw,value=latest,enable=${{ github.event.release.target_commitish == 'main' }}
-      
+
       - name: Build and push Docker image
         uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
         with:
@@ -48,12 +48,12 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   pull_the_registery:
-      needs: push_to_registry
-      name: Push Docker image to Server
-      runs-on: ubuntu-latest
-      if: "!contains(github.ref_name, 'ubs_kalung') && !contains(github.ref_name, 'ubs_hollow')"
+    needs: push_to_registry
+    name: Push Docker image to Server
+    runs-on: ubuntu-latest
+    if: "!contains(github.ref_name, 'ubs_kalung') && !contains(github.ref_name, 'ubs_hollow')"
 
-      steps:
+    steps:
       - name: executing remote ssh commands using password
         uses: appleboy/ssh-action@v0.1.10
         with:
@@ -62,10 +62,11 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
+            sudo echo "${{ secrets.ENV_FILE_PRODUCTION }}" > .env.jaya-transport-service
             sudo docker stop jaya-transport-service
             sudo docker rm jaya-transport-service
 
             sudo docker rmi sigitnurmajid/jaya-transport-service:latest
             sudo docker pull sigitnurmajid/jaya-transport-service:latest
 
-            sudo docker run -t -d --restart always --network host --name jaya-transport-service sigitnurmajid/jaya-transport-service:latest
+            sudo docker run -t -d --restart always --network host --env-file .env.jaya-transport-service --name jaya-transport-service sigitnurmajid/jaya-transport-service:latest
