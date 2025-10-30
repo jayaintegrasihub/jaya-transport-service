@@ -1,0 +1,73 @@
+name: Jaya Transport Service CI/CD
+
+on:
+  workflow_dispatch:
+
+jobs:
+  container:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Set Environment File
+        run: |
+          TAG_NAME="${GITHUB_REF_NAME}"
+          if [[ "$TAG_NAME" == *"ubs_kalung"* ]]; then
+            echo "ENVIRONMENT=ubs_kalung" >> $GITHUB_ENV
+            echo "${{ secrets.ENV_UBS_FILE_PRODUCTION }}" > .env
+          elif [[ "$TAG_NAME" == *"ubs_hollow"* ]]; then
+            echo "ENVIRONMENT=ubs_hollow" >> $GITHUB_ENV
+            echo "${{ secrets.ENV_UBS_HOLLOW_FILE_PRODUCTION }}" > .env
+          else
+            echo "ENVIRONMENT=main" >> $GITHUB_ENV
+            echo "${{ secrets.ENV_FILE_PRODUCTION }}" > .env
+          fi
+
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: sigitnurmajid/jaya-transport-service
+          tags: |
+            type=semver,pattern=latest
+            type=semver,pattern={{version}}-${{ github.ref_name }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    needs: container
+    name: Deploy to Server (Only for Main)
+    runs-on: ubuntu-latest
+    if: "!contains(github.ref_name, 'ubs_kalung') && !contains(github.ref_name, 'ubs_hollow')"
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            sudo docker stop jaya-transport-service || true
+            sudo docker rm jaya-transport-service || true
+            sudo docker rmi sigitnurmajid/jaya-transport-service:latest || true
+            sudo docker pull sigitnurmajid/jaya-transport-service:latest
+            sudo docker run -d --restart always --network host --name jaya-transport-service sigitnurmajid/jaya-transport-service:latest
