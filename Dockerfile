@@ -32,8 +32,6 @@ WORKDIR /root/
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/jaya-transport-service .
 
-# Copy the .env file
-COPY .env .
 
 # Command to run the executable
 CMD ["./jaya-transport-service"]

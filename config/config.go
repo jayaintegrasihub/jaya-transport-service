@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/spf13/viper"
+	"github.com/caarlos0/env/v11"
 )
 
 type Config struct {
@@ -12,59 +12,37 @@ type Config struct {
 }
 
 type MQTTConfig struct {
-	Broker   string
-	ClientID string
-	Topic    string
-	Username string
-	Password string
+	Broker   string `env:"MQTT_BROKER,required"`
+	ClientID string `env:"MQTT_CLIENT_ID,required"`
+	Topic    string `env:"MQTT_TOPIC,required"`
+	Username string `env:"MQTT_USERNAME,required"`
+	Password string `env:"MQTT_PASSWORD,required"`
 }
 
 type InfluxDBConfig struct {
-	URL    string
-	Token  string
-	Org    string
-	Bucket string
+	URL    string `env:"INFLUXDB_URL,required"`
+	Token  string `env:"INFLUXDB_TOKEN,required"`
+	Org    string `env:"INFLUXDB_ORG,required"`
+	Bucket string `env:"INFLUXDB_BUCKET,required"`
 }
 
 type JayaApiConfig struct {
-	URL   string
-	Token string
+	URL   string `env:"JAYA_URL,required"`
+	Token string `env:"JAYA_TOKEN,required"`
 }
 
 type RedisConfig struct {
-	URL      string
-	Password string
-	Username string
-	DB       int
+	URL      string `env:"REDIS_URL,required"`
+	Password string `env:"REDIS_PASSWORD,required"`
+	Username string `env:"REDIS_USERNAME,required"`
+	DB       int    `env:"REDIS_DB,required"`
 }
 
-func LoadConfig() *Config {
-	viper.SetConfigFile(".env")
-	viper.ReadInConfig()
-
-	return &Config{
-		MQTT: MQTTConfig{
-			Broker:   viper.GetString("MQTT_BROKER"),
-			ClientID: viper.GetString("MQTT_CLIENT_ID"),
-			Topic:    viper.GetString("MQTT_TOPIC"),
-			Username: viper.GetString("MQTT_USERNAME"),
-			Password: viper.GetString("MQTT_PASSWORD"),
-		},
-		InfluxDB: InfluxDBConfig{
-			URL:    viper.GetString("INFLUXDB_URL"),
-			Token:  viper.GetString("INFLUXDB_TOKEN"),
-			Org:    viper.GetString("INFLUXDB_ORG"),
-			Bucket: viper.GetString("INFLUXDB_BUCKET"),
-		},
-		JayaApi: JayaApiConfig{
-			URL:   viper.GetString("JAYA_URL"),
-			Token: viper.GetString("JAYA_TOKEN"),
-		},
-		Redis: RedisConfig{
-			URL:      viper.GetString("REDIS_URL"),
-			Password: viper.GetString("REDIS_PASSWORD"),
-			Username: viper.GetString("REDIS_USERNAME"),
-			DB:       viper.GetInt("REDIS_DB"),
-		},
+func LoadConfig() (*Config, error) {
+	cfg := &Config{}
+	if err := env.Parse(cfg); err != nil {
+		return nil, err
 	}
+	
+	return cfg, nil
 }
